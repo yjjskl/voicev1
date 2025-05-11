@@ -4,7 +4,7 @@
 let metaballShader;
 
 /* ───────── microphone controls ───────── */
-const MIN_VOL   = 0.10;   // treat below 3 % as silence
+const MIN_VOL   = 0.20;   // treat below 3 % as silence
 const MAX_VOL   = 0.60;   // treat above 60 % as full volume
 const GAIN      =  6.0;   // extra boost after mapping (set 1 to disable)
 const smoothK   = 0.08;   // smoothing factor (lower = steadier)
