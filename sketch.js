@@ -1,55 +1,54 @@
-/* Metaball grid — press F for full‑screen, Esc to exit
-   160 px spacing, 80 px margin (left + top only)
-   Dot diameter never below 40 px, but still breathes with mic volume
-------------------------------------------------------------------- */
+/* Metaball grid — toggle full‑screen with “F”, mic‑reactive blobs
+   160‑px spacing, 80‑px margin (left & top only)
+---------------------------------------------------------------- */
 let metaballShader;
 
-/* ── microphone controls ── */
+/* audio */
 let mic, amplitude, smoothedVol = 0;
-const smoothK     = 0.08;   // smoothing factor
-const minStrength = 2.0;    // blob field at silence
-const maxStrength = 8.0;    // blob field at loud volume
+const minStrength = 2.00;
+const maxStrength = 8.00;
+const smoothK     = 0.08;
 
-/* ── grid settings ── */
+/* grid settings */
 const spacing = 160;
-const marginL = spacing / 2;   // 80 px
+const marginL = spacing / 2;     // 80 px
 const marginT = spacing / 2;
-const dotSize = 80;            // upper limit of random wobble
-const MIN_DIAM = 40;           // absolute minimum diameter
-const dots    = [];
+const dotSize = 80;
+const dots = [];
 
 /* ---------------------------------------------------------- */
 class Dot {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.curr = random(MIN_DIAM, dotSize);      // ≥ 40 px
-    this.tgt  = random(MIN_DIAM, dotSize);
-    this.next = millis() + random(1000, 3000);  // 1–3 s
+    this.curr = random(20, dotSize);
+    this.tgt  = random(20, dotSize);
+    this.next = millis() + random(1000, 3000);
   }
   update() {
     if (millis() > this.next) {
-      this.tgt  = random(MIN_DIAM, dotSize);
+      this.tgt  = random(10, dotSize);
       this.next = millis() + random(1000, 3000);
     }
     this.curr = lerp(this.curr, this.tgt, 0.05);
   }
-  r() { return this.curr * 0.5; }               // radius, no cap
+  r() { return this.curr * 0.5; }
 }
 
 /* ---------------------------------------------------------- */
 function preload() {
-  metaballShader = loadShader('shaders/meta.vert','shaders/meta.frag');
+  metaballShader = loadShader('shaders/meta.vert', 'shaders/meta.frag');
 }
 
 function setup() {
-  pixelDensity(1);                              // sync CSS & GL pixels
+  pixelDensity(1);                           // sync CSS & GL pixels
   createCanvas(windowWidth, windowHeight, WEBGL);
-  noStroke(); rectMode(CENTER);
+  noStroke();
+  rectMode(CENTER);
 
-  mic       = new p5.AudioIn();
+  mic = new p5.AudioIn();
   amplitude = new p5.Amplitude();
-  mic.start(() => amplitude.setInput(mic));     // ask permission
+  mic.start(() => amplitude.setInput(mic));
 
   buildGrid();
 }
@@ -57,26 +56,22 @@ function setup() {
 function draw() {
   background(0);
 
-  /* mic loudness -> smoothedVol (0‑1) -------------------- */
+  /* mic volume → strength */
   smoothedVol = lerp(
     smoothedVol,
-    constrain(amplitude.getLevel() * 3.0, 0, 1),   // gain = 3
+    constrain(amplitude.getLevel() * 3.0, 0, 1),
     smoothK
   );
+  const strength = map(smoothedVol, 0, 1, minStrength, maxStrength);
 
-  /* map volume to field strength & size scaling ---------- */
-  const strength  = lerp(minStrength, maxStrength, smoothedVol);
-  const sizeScale = lerp(0.2,         2.0,         smoothedVol);
-  // quiet → ×0.5, loud → ×2.0
-
-  /* pack dot uniforms ------------------------------------ */
+  /* pack uniforms */
   const buf = new Float32Array(dots.length * 3);
   dots.forEach((d, i) => {
     d.update();
     const j = 3 * i;
-    buf[j]     = d.x + width  / 2;            // X pixel
-    buf[j + 1] = d.y + height / 2;            // Y pixel
-    buf[j + 2] = d.r() * sizeScale;           // radius scaled by volume
+    buf[j]     = d.x + width  / 2;
+    buf[j + 1] = d.y + height / 2;
+    buf[j + 2] = d.r();
   });
 
   shader(metaballShader);
@@ -91,9 +86,10 @@ function draw() {
 /* ---------------------------------------------------------- */
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  buildGrid();
+  buildGrid();                              // rebuild to new size
 }
 
+/* build grid with margin on left & top only */
 function buildGrid() {
   dots.length = 0;
   const startX = -width  / 2 + marginL;
@@ -105,15 +101,24 @@ function buildGrid() {
   }
 }
 
-/* -------- full‑screen & audio‑context unlock -------------- */
+/* ---------------------------------------------------------- */
+/*  Full‑screen toggle                                        */
 function keyPressed() {
-  if (key === 'f' || key === 'F') fullscreen(!fullscreen());
-  if (keyCode === 27)             fullscreen(false);
+  if (key === 'f' || key === 'F') {
+    const fs = fullscreen();
+    fullscreen(!fs);         // toggle
+    // buildGrid will be called automatically via windowResized
+  }
+  // ESC automatically exits full‑screen in browsers,
+  // but you can manually ensure it here if desired:
+  if (keyCode === 27) {      // 27 = ESC
+    fullscreen(false);
+  }
 }
 
-function resumeAudio() {
-  if (getAudioContext().state !== 'running')
+/* autoplay unlock for mobile                                 */
+function touchStarted() {
+  if (getAudioContext().state !== 'running') {
     getAudioContext().resume();
+  }
 }
-function mousePressed() { resumeAudio(); }
-function touchStarted() { resumeAudio(); }
