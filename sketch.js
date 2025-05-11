@@ -13,7 +13,7 @@ let mic, amplitude, smoothedVol = 0;
 
 /* blob‑field parameters */
 const minStrength = 0.20;
-const maxStrength = 12.00;
+const maxStrength = 4.00;
 
 /* dot size scaling */
 const minScale = 0.5;     // quiet → 50 % of wobble size
