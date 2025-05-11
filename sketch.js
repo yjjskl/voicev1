@@ -21,8 +21,8 @@ class Dot {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.curr = random(20, dotSize);
-    this.tgt  = random(20, dotSize);
+    this.curr = random(10, dotSize);
+    this.tgt  = random(10, dotSize);
     this.next = millis() + random(1000, 3000);
   }
   update() {
