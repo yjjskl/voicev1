@@ -13,7 +13,7 @@ const smoothK     = 0.08;
 const spacing    = 160;
 const marginL    = spacing / 2;
 const marginT    = spacing / 2;
-const dotSize    = 50;          // target diameter range
+const dotSize    = 60;          // target diameter range
 const MAX_RADIUS = 100;          // <- HARD CAP (px) on radius
 const dots       = [];
 
