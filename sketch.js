@@ -66,7 +66,7 @@ function draw() {
 
   /* map volume to field strength & size scaling ---------- */
   const strength  = lerp(minStrength, maxStrength, smoothedVol);
-  const sizeScale = lerp(0.5,         2.0,         smoothedVol);
+  const sizeScale = lerp(0.2,         2.0,         smoothedVol);
   // quiet → ×0.5, loud → ×2.0
 
   /* pack dot uniforms ------------------------------------ */
