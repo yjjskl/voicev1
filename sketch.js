@@ -1,117 +1,122 @@
 /* Metaball grid — full‑screen toggle, 160 px spacing,
-   80 px margin (left & top), mic‑reactive easing & merging
+   80 px margin (left & top), mic‑scaled dot size & merging
 ---------------------------------------------------------------- */
 let metaballShader;
 
-/* ── mic vars ── */
+/* ── microphone settings ── */
 let mic, amplitude, smoothedVol = 0;
-const minStrength = 1.00;
-const maxStrength = 12.00;
-const smoothK     = 0.08;
+const GAIN        = 8.0;        // bigger → more sensitive (was 6)
+const smoothK     = 0.08;       // smoothing factor
+
+/* blob field strength */
+const minStrength = 0.20;
+const maxStrength = 2.00;
+
+/* dot‑size scaling by volume */
+const minScale    = 0.5;        // quiet → 50 % of size
+const maxScale    = 2.0;        // loud  → 200 % of size
 
 /* ── grid settings ── */
 const spacing = 160;
-const marginL = spacing / 2;        // 80 px left gap
-const marginT = spacing / 2;        // 80 px top  gap
-const dotSize = 50;                 // diameter range
+const marginL = spacing / 2;    // 80 px left gap
+const marginT = spacing / 2;    // 80 px top  gap
+const dotSize = 50;             // base (wobble) diameter
 const dots    = [];
 
-/* helper: clamped map ------------------------------------ */
-function mapClamp(v, a1, a2, b1, b2) {
-  return constrain(map(v, a1, a2, b1, b2),
-                   min(b1, b2), max(b1, b2));
+/* helper --------------------------------------------------- */
+function mapClamp(v,a1,a2,b1,b2){
+  return constrain(map(v,a1,a2,b1,b2), min(b1,b2), max(b1,b2));
 }
 
-/* Dot class ---------------------------------------------- */
+/* Dot class ------------------------------------------------ */
 class Dot {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.curr = random(10, dotSize);
+    this.curr = random(10, dotSize);          // base diameter
     this.tgt  = random(10, dotSize);
     this.next = millis() + random(1000, 3000);
   }
-  update(vol) {
+  update() {
     if (millis() > this.next) {
       this.tgt  = random(10, dotSize);
       this.next = millis() + random(1000, 3000);
     }
-    const lerpF = mapClamp(vol, 0, 0.7, 0.25, 0.04); // fast when quiet
-    this.curr   = lerp(this.curr, this.tgt, lerpF);
+    this.curr = lerp(this.curr, this.tgt, 0.05);   // steady wobble
   }
-  r() { return this.curr * 0.5; }                   // NO size cap
+  /* radius scaled by current volume */
+  r(scale) { return this.curr * 0.5 * scale; }
 }
 
-/* -------------------------------------------------------- */
-function preload() {
+/* ---------------------------------------------------------- */
+function preload(){
   metaballShader = loadShader('shaders/meta.vert', 'shaders/meta.frag');
 }
 
-function setup() {
-  pixelDensity(1);                                  // sync CSS & GL px
+function setup(){
+  pixelDensity(1);
   createCanvas(windowWidth, windowHeight, WEBGL);
-  noStroke();
-  rectMode(CENTER);
+  noStroke(); rectMode(CENTER);
 
-  mic       = new p5.AudioIn();
+  mic = new p5.AudioIn();
   amplitude = new p5.Amplitude();
-  mic.start(() => amplitude.setInput(mic));
+  mic.start(()=> amplitude.setInput(mic));
 
   buildGrid();
 }
 
-function draw() {
+function draw(){
   background(0);
 
-  /* mic loudness → strength */
-  const raw = constrain(amplitude.getLevel() * 6.0, 0, 1); // gain = 6
+  /* mic volume processing --------------------------------- */
+  const raw = constrain(amplitude.getLevel() * GAIN, 0, 1);
   smoothedVol = lerp(smoothedVol, raw, smoothK);
-  const strength = map(smoothedVol, 0, 1, minStrength, maxStrength);
 
-  /* update dots & build uniform buffer */
-  const buf = new Float32Array(dots.length * 3);
-  dots.forEach((d, i) => {
-    d.update(smoothedVol);
-    const j = 3 * i;
-    buf[j]     = d.x + width  / 2;
-    buf[j + 1] = d.y + height / 2;   // no Y‑flip
-    buf[j + 2] = d.r();
+  const strength = map(smoothedVol, 0, 1, minStrength, maxStrength);
+  const sizeScale = map(smoothedVol, 0, 1, minScale, maxScale);
+
+  /* pack uniforms ----------------------------------------- */
+  const buf = new Float32Array(dots.length*3);
+  dots.forEach((d,i)=>{
+    d.update();
+    const j = 3*i;
+    buf[j]   = d.x + width / 2;
+    buf[j+1] = d.y + height/ 2;
+    buf[j+2] = d.r(sizeScale);          // scaled radius
   });
 
   shader(metaballShader);
-  metaballShader.setUniform('iResolution', [width, height]);
+  metaballShader.setUniform('iResolution',[width,height]);
   metaballShader.setUniform('dots',       buf);
   metaballShader.setUniform('dotCount',   dots.length);
   metaballShader.setUniform('uStrength',  strength);
 
-  rect(0, 0, width, height);          // full‑screen quad
+  rect(0,0,width,height);
 }
 
-/* rebuild grid on resize ---------------------------------- */
-function windowResized() {
+/* responsive grid ----------------------------------------- */
+function windowResized(){
   resizeCanvas(windowWidth, windowHeight);
   buildGrid();
 }
-
-function buildGrid() {
-  dots.length = 0;
-  const startX = -width  / 2 + marginL;
-  const startY = -height / 2 + marginT;
-  for (let y = startY; y <= height / 2; y += spacing) {
-    for (let x = startX; x <= width  / 2; x += spacing) {
-      dots.push(new Dot(x, y));
+function buildGrid(){
+  dots.length=0;
+  const startX=-width /2 + marginL;
+  const startY=-height/2 + marginT;
+  for(let y=startY; y<=height/2; y+=spacing){
+    for(let x=startX; x<=width/2; x+=spacing){
+      dots.push(new Dot(x,y));
     }
   }
 }
 
 /* full‑screen toggle -------------------------------------- */
-function keyPressed() {
-  if (key === 'f' || key === 'F') fullscreen(!fullscreen());
-  if (keyCode === 27)             fullscreen(false);   // Esc
+function keyPressed(){
+  if(key==='f'||key==='F') fullscreen(!fullscreen());
+  if(keyCode===27) fullscreen(false);
 }
 
 /* mobile autoplay unlock ---------------------------------- */
-function touchStarted() {
-  if (getAudioContext().state !== 'running')
-    getAudioContext().resume();
+function touchStarted(){
+  if(getAudioContext().state!=='running') getAudioContext().resume();
 }
