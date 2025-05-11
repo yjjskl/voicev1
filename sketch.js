@@ -5,12 +5,12 @@ let metaballShader;
 
 /* ── microphone settings ── */
 let mic, amplitude, smoothedVol = 0;
-const GAIN        = 8.0;        // bigger → more sensitive (was 6)
+const GAIN        = 10.0;        // bigger → more sensitive (was 6)
 const smoothK     = 0.09;       // smoothing factor
 
 /* blob field strength */
-const minStrength = 0.20;
-const maxStrength = 12.00;
+const minStrength = 0.60;
+const maxStrength = 10.00;
 
 /* dot‑size scaling by volume */
 const minScale    = 1;        // quiet → 50 % of size
