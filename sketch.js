@@ -59,7 +59,7 @@ function draw() {
   /* mic volume → strength */
   smoothedVol = lerp(
     smoothedVol,
-    constrain(amplitude.getLevel() * 3.0, 0, 1),
+    constrain(amplitude.getLevel() * 6.0, 0, 1),
     smoothK
   );
   const strength = map(smoothedVol, 0, 1, minStrength, maxStrength);
