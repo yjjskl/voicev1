@@ -13,7 +13,7 @@ const minStrength = 0.60;
 const maxStrength = 10.00;
 
 /* dot‑size scaling by volume */
-const minScale    = 1;        // quiet → 50 % of size
+const minScale    = 0.5;        // quiet → 50 % of size
 const maxScale    = 3.0;        // loud  → 300 % of size
 
 /* ── grid settings ── */
