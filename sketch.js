@@ -5,7 +5,7 @@ let metaballShader;
 
 /* audio */
 let mic, amplitude, smoothedVol = 0;
-const minStrength = 2.00;
+const minStrength = 1.00;
 const maxStrength = 10.00;
 const smoothK     = 0.08;
 
